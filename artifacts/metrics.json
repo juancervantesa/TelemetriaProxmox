@@ -1,0 +1,177 @@
+{
+  "version": "sigecad-iforest-v1-b4f9566a",
+  "dataset": "Proxmox Datacenter Telemetry (SIGeCAD)",
+  "unit": "Temporal window (node:dl380-01, 10-minute aggregation)",
+  "seed": 42,
+  "data_sha256": "b4f9566ae924a8b50d85d3b8813f2956ee79e47f0ebc7e91a766dda005ceddd1",
+  "false_alarm_budget": 0.05,
+  "validation": {
+    "model": {
+      "threshold": 0.5388947391066325,
+      "precision": 0.4307692307692308,
+      "recall": 0.9333333333333333,
+      "f1": 0.5894736842105263,
+      "false_positive_rate": 0.01863041289023162,
+      "alerts": 65,
+      "tn": 1949,
+      "fp": 37,
+      "fn": 2,
+      "tp": 28
+    },
+    "baseline": {
+      "threshold": 0.7465263157894737,
+      "precision": 0.5714285714285714,
+      "recall": 0.9333333333333333,
+      "f1": 0.7088607594936709,
+      "false_positive_rate": 0.010574018126888218,
+      "alerts": 49,
+      "tn": 1965,
+      "fp": 21,
+      "fn": 2,
+      "tp": 28
+    }
+  },
+  "test": {
+    "model": {
+      "precision": 0.38181818181818183,
+      "recall": 0.9130434782608695,
+      "f1": 0.5384615384615384,
+      "false_positive_rate": 0.02399435426958363,
+      "alerts": 55,
+      "tn": 1383,
+      "fp": 34,
+      "fn": 2,
+      "tp": 21,
+      "average_precision": 0.6099,
+      "event_based": {
+        "event_precision": 0.0968,
+        "event_recall": 1.0,
+        "event_f1": 0.1765,
+        "tp_events": 3,
+        "fn_events": 0,
+        "fp_events": 28,
+        "total_incidents": 3,
+        "avg_lead_time_minutes": 0.0,
+        "incident_details": [
+          {
+            "incident_id": "INC-TEST-01",
+            "resource_id": "guest:100_AD-Zentyal",
+            "detected": true,
+            "first_alert": "2026-09-29T14:30:00",
+            "start_time": "2026-09-29T14:30:00",
+            "lead_time_minutes": 0.0,
+            "severity": "critical"
+          },
+          {
+            "incident_id": "INC-TEST-03",
+            "resource_id": "guest:101_win11",
+            "detected": true,
+            "first_alert": "2026-09-27T02:00:00",
+            "start_time": "2026-09-27T02:00:00",
+            "lead_time_minutes": 0.0,
+            "severity": "high"
+          },
+          {
+            "incident_id": "INC-TEST-04",
+            "resource_id": "node:dl360-04",
+            "detected": true,
+            "first_alert": "2026-09-28T13:00:00",
+            "start_time": "2026-09-28T13:00:00",
+            "lead_time_minutes": 0.0,
+            "severity": "warning"
+          }
+        ]
+      },
+      "prevalence": 0.01597222222222222,
+      "windows_evaluated": 1440
+    },
+    "baseline": {
+      "precision": 0.4772727272727273,
+      "recall": 0.9130434782608695,
+      "f1": 0.6268656716417911,
+      "false_positive_rate": 0.016231474947071278,
+      "alerts": 44,
+      "tn": 1394,
+      "fp": 23,
+      "fn": 2,
+      "tp": 21,
+      "average_precision": 0.8489,
+      "event_based": {
+        "event_precision": 0.1429,
+        "event_recall": 1.0,
+        "event_f1": 0.25,
+        "tp_events": 3,
+        "fn_events": 0,
+        "fp_events": 18,
+        "total_incidents": 3,
+        "avg_lead_time_minutes": -10.0,
+        "incident_details": [
+          {
+            "incident_id": "INC-TEST-01",
+            "resource_id": "guest:100_AD-Zentyal",
+            "detected": true,
+            "first_alert": "2026-09-29T14:00:00",
+            "start_time": "2026-09-29T14:30:00",
+            "lead_time_minutes": 30.0,
+            "severity": "critical"
+          },
+          {
+            "incident_id": "INC-TEST-03",
+            "resource_id": "guest:101_win11",
+            "detected": true,
+            "first_alert": "2026-09-27T03:00:00",
+            "start_time": "2026-09-27T02:00:00",
+            "lead_time_minutes": -60.0,
+            "severity": "high"
+          },
+          {
+            "incident_id": "INC-TEST-04",
+            "resource_id": "node:dl360-04",
+            "detected": true,
+            "first_alert": "2026-09-28T13:00:00",
+            "start_time": "2026-09-28T13:00:00",
+            "lead_time_minutes": 0.0,
+            "severity": "warning"
+          }
+        ]
+      },
+      "prevalence": 0.01597222222222222,
+      "windows_evaluated": 1440
+    }
+  },
+  "by_incident_type": [
+    {
+      "type": "cpu_overheat",
+      "count": 8,
+      "model_recall": 1.0,
+      "baseline_recall": 1.0
+    },
+    {
+      "type": "memory_leak",
+      "count": 9,
+      "model_recall": 0.7778,
+      "baseline_recall": 0.7778
+    },
+    {
+      "type": "vm_crash",
+      "count": 6,
+      "model_recall": 1.0,
+      "baseline_recall": 1.0
+    }
+  ],
+  "data_counts": {
+    "total_windows": 8064,
+    "train_windows": 4608,
+    "validation_windows": 2016,
+    "test_windows": 1440,
+    "val_anomalies": 30,
+    "test_anomalies": 23,
+    "incidents_cataloged": 7
+  },
+  "system_environment": {
+    "python": "3.13.5",
+    "sklearn": "1.9.1",
+    "numpy": "2.5.3",
+    "pandas": "2.3.3"
+  }
+}

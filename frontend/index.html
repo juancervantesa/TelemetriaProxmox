@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SIGeCAD · Telemetría y Detección de Anomalías en Centro de Datos</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <span class="brand-symbol">⚡</span>
+      <div class="brand-text">
+        <span class="brand-title">SIGeCAD</span>
+        <span class="brand-subtitle">CENTRO DE DATOS · PROXMOX VE</span>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-tech">Isolation Forest + Baseline</span>
+      <span id="system-status-badge" class="badge badge-status">Conectando…</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <p class="eyebrow">MONITOREO DE ALERTA TEMPRANA MULTIVARIADA</p>
+        <h1>Detección de anomalías en telemetría de Proxmox</h1>
+        <p class="intro">
+          Evaluación en ventanas temporales agregadas (10 min) para nodos físicos, máquinas virtuales QEMU y sensores Redfish/IPMI.
+          Compara el comportamiento del modelo de aprendizaje no supervisado <strong>Isolation Forest</strong> frente a los <strong>umbrales operacionales fijos</strong> de SIGeCAD.
+        </p>
+        <div class="hero-tags">
+          <span>Unidad: Ventana temporal (10 min)</span>
+          <span>Métrica: F1 por Evento</span>
+          <span>Lead Time: Detección anticipada</span>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-header">
+          <span class="card-icon">📊</span>
+          <span class="card-title">OBJETIVO OPERACIONAL</span>
+        </div>
+        <p class="card-body">
+          Detectar incidentes (fugas de memoria, cuellos de botella de storage, fallas térmicas o caídas de VM) <em>antes</em> de que provoquen indisponibilidad de servicios en producción.
+        </p>
+        <div class="hero-card-footer">
+          <span>Evaluación honesta vs Línea Base</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav" aria-label="Secciones del sistema">
+      <button class="nav-btn active" data-view="simulator" aria-pressed="true">
+        01 · Simulador e Inferencia
+      </button>
+      <button class="nav-btn" data-view="results" aria-pressed="false">
+        02 · Evaluación y Métricas
+      </button>
+      <button class="nav-btn" data-view="method" aria-pressed="false">
+        03 · Metodología y Arquitectura
+      </button>
+    </nav>
+
+    <!-- Global Alert / Status Banner -->
+    <div id="status-banner" class="banner hidden" role="status"></div>
+
+    <!-- VIEW 1: SIMULATOR & INFERENCE -->
+    <section id="simulator" class="view">
+      <div class="grid-2col">
+        <!-- Input Form Panel -->
+        <section class="panel input-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">ENTRADA / VENTANA TEMPORAL (10 MIN)</p>
+              <h2>Configurar telemetría del recurso</h2>
+            </div>
+            <select id="resource-select" class="resource-selector" aria-label="Seleccionar recurso">
+              <option value="node:dl380-01">Nodo DL-380-01 (Clúster Principal)</option>
+              <option value="node:dl360-04">Nodo DL-360-04 (Cómputo 2)</option>
+              <option value="node:srvzy">Nodo srvzy (Santa Cruz)</option>
+              <option value="guest:100_AD-Zentyal">VM 100 - AD Zentyal (Controlador)</option>
+              <option value="guest:101_win11">VM 101 - Windows 11 Desktop</option>
+              <option value="guest:402_NS1">VM 402 - DNS NS1-Interno</option>
+            </select>
+          </div>
+
+          <p class="muted">
+            Carga un escenario preconfigurado del centro de datos o ajusta manualmente los deslizadores:
+          </p>
+
+          <!-- Quick Scenario Buttons -->
+          <div class="scenarios-container">
+            <span class="scenarios-label">Escenarios operacionales:</span>
+            <div id="scenarios-list" class="scenarios-chips"></div>
+          </div>
+
+          <!-- Feature Form -->
+          <form id="telemetry-form" class="telemetry-form">
+            <div id="feature-fields" class="feature-fields-grid"></div>
+
+            <div class="form-actions">
+              <button id="btn-submit" type="submit" class="btn btn-primary" disabled>
+                <span>Analizar ventana de telemetría</span>
+                <span class="btn-arrow">→</span>
+              </button>
+              <button id="btn-reset" type="button" class="btn btn-secondary">
+                Restablecer valores
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Inspection Result Panel -->
+        <section class="panel result-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">SALIDA / DECISIÓN OPERACIONAL</p>
+              <h2>Diagnóstico del sistema</h2>
+            </div>
+            <span id="model-version-tag" class="small-tag">Cargando modelo…</span>
+          </div>
+
+          <!-- Empty State -->
+          <div id="result-empty" class="empty-state">
+            <div class="empty-icon">📈</div>
+            <h3>Sin análisis activo</h3>
+            <p>Selecciona un escenario o ajusta los parámetros de telemetría y pulsa <strong>Analizar ventana</strong> para comparar el modelo Isolation Forest con la línea base de umbrales operacionales fijos.</p>
+          </div>
+
+          <!-- Populated State -->
+          <div id="result-content" class="result-content hidden">
+            <!-- Diagnosis Card -->
+            <div id="diagnosis-card" class="diagnosis-card">
+              <div class="diagnosis-header">
+                <span id="diagnosis-badge" class="badge">NORMAL</span>
+                <span id="diagnosis-resource" class="diagnosis-resource">node:dl380-01</span>
+              </div>
+              <p id="diagnosis-text" class="diagnosis-text">Cargando diagnóstico…</p>
+            </div>
+
+            <!-- Comparison Cards Grid -->
+            <div class="comparison-grid">
+              <!-- Isolation Forest Card -->
+              <div class="decision-card model-card">
+                <div class="decision-header">
+                  <span class="decision-title">Isolation Forest (ML)</span>
+                  <span id="model-alert-badge" class="badge">NORMAL</span>
+                </div>
+                <div class="score-display">
+                  <div class="score-number-group">
+                    <span class="score-label">Puntaje de anomalía:</span>
+                    <span id="model-score-val" class="score-val">0.0000</span>
+                  </div>
+                  <div class="score-number-group">
+                    <span class="score-label">Umbral calibrado:</span>
+                    <span id="model-threshold-val" class="score-val threshold">0.0000</span>
+                  </div>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div id="model-score-bar" class="progress-bar-fill"></div>
+                </div>
+                <p class="decision-desc">
+                  Analiza combinaciones multivariadas de carga, tendencia temporal e inestabilidad simultánea.
+                </p>
+              </div>
+
+              <!-- Baseline Thresholds Card -->
+              <div class="decision-card baseline-card">
+                <div class="decision-header">
+                  <span class="decision-title">Línea Base (Umbrales Fijos)</span>
+                  <span id="baseline-alert-badge" class="badge">NORMAL</span>
+                </div>
+                <div class="score-display">
+                  <div class="score-number-group">
+                    <span class="score-label">Razón crítica máx:</span>
+                    <span id="baseline-score-val" class="score-val">0.0000</span>
+                  </div>
+                  <div class="score-number-group">
+                    <span class="score-label">Umbral crítico:</span>
+                    <span id="baseline-threshold-val" class="score-val threshold">1.0000</span>
+                  </div>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div id="baseline-score-bar" class="progress-bar-fill"></div>
+                </div>
+                <p id="baseline-violations-text" class="decision-desc">
+                  Reglas fijas: Warning 80% / Critical 90% (CPU, RAM, I/O wait, Temp).
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature Attribution Indicators -->
+            <div class="indicators-section">
+              <div class="indicators-header">
+                <h3>Atribución de características y desvío robusto</h3>
+                <span class="muted-note">Unidades MAD respecto al periodo normal histórico</span>
+              </div>
+              <div id="indicators-list" class="indicators-list"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- VIEW 2: EVALUATION AND METRICS -->
+    <section id="results" class="view hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">RESULTADOS FORMALES EN CONJUNTO DE PRUEBA</p>
+            <h2>Comparación cuantitativa del experimento</h2>
+          </div>
+          <span class="small-tag">Prueba temporal no vista</span>
+        </div>
+
+        <p class="intro-p">
+          El modelo fue entrenado en un periodo puramente normal (< 18 Septiembre 2026). Los umbrales de decisión se seleccionaron estrictamente en el conjunto de validación fijando un presupuesto de falsas alarmas (FPR ≤ 5%). El rendimiento a continuación corresponde al conjunto de prueba final sin reajustes.
+        </p>
+
+        <!-- Metric Cards Grid -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Métrica Principal</span>
+            <span class="metric-title">F1 por Evento</span>
+            <div class="metric-compare">
+              <div>
+                <span class="compare-val model" id="m-event-f1-model">-</span>
+                <span class="compare-name">Isolation Forest</span>
+              </div>
+              <span class="vs">vs</span>
+              <div>
+                <span class="compare-val baseline" id="m-event-f1-base">-</span>
+                <span class="compare-name">Línea Base</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Detección de Incidentes</span>
+            <span class="metric-title">Recall por Evento</span>
+            <div class="metric-compare">
+              <div>
+                <span class="compare-val model" id="m-event-rec-model">-</span>
+                <span class="compare-name">Isolation Forest</span>
+              </div>
+              <span class="vs">vs</span>
+              <div>
+                <span class="compare-val baseline" id="m-event-rec-base">-</span>
+                <span class="compare-name">Línea Base</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Alerta Temprana</span>
+            <span class="metric-title">Lead Time Medio</span>
+            <div class="metric-compare">
+              <div>
+                <span class="compare-val model" id="m-lead-model">-</span>
+                <span class="compare-name">Isolation Forest</span>
+              </div>
+              <span class="vs">vs</span>
+              <div>
+                <span class="compare-val baseline" id="m-lead-base">-</span>
+                <span class="compare-name">Línea Base</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Control de Falsas Alarmas</span>
+            <span class="metric-title">FPR en Prueba</span>
+            <div class="metric-compare">
+              <div>
+                <span class="compare-val model" id="m-fpr-model">-</span>
+                <span class="compare-name">Isolation Forest</span>
+              </div>
+              <span class="vs">vs</span>
+              <div>
+                <span class="compare-val baseline" id="m-fpr-base">-</span>
+                <span class="compare-name">Línea Base</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Metrics Table -->
+        <div class="table-wrap">
+          <table class="metrics-table">
+            <thead>
+              <tr>
+                <th>Métrica de Evaluación</th>
+                <th>Isolation Forest (ML)</th>
+                <th>Línea Base (Umbrales Fijos)</th>
+                <th>Interpretación Operativa en Centro de Datos</th>
+              </tr>
+            </thead>
+            <tbody id="metrics-table-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Incidents Catalog in Test Set -->
+        <div class="incident-catalog-wrap">
+          <h3>Incidentes operacionales evaluados en conjunto de prueba</h3>
+          <div id="incidents-list" class="incidents-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: METHODOLOGY AND ARCHITECTURE -->
+    <section id="method" class="view hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">FUNDAMENTACIÓN TÉCNICA Y METODOLOGÍA</p>
+            <h2>Diseño conceptual del sistema</h2>
+          </div>
+        </div>
+
+        <div class="methodology-grid">
+          <div class="method-card">
+            <h3>1. Unidad de Observación: Ventana Temporal</h3>
+            <p>
+              En lugar de analizar lecturas crudas cada 30 segundos (que generan alto ruido y falsas alarmas por ráfagas inofensivas como crons o backups rápidos), agrupamos la telemetría en <strong>ventanas de 10 minutos</strong>.
+            </p>
+            <p>
+              Por cada ventana se extraen 11 estadísticos clave: promedios, valores pico, variabilidad (desviación estándar) y tendencias direccionales (pendientes).
+            </p>
+          </div>
+
+          <div class="method-card">
+            <h3>2. Modelo: Isolation Forest Multivariado</h3>
+            <p>
+              Aísla observaciones anómalas basándose en la profundidad media de partición en un bosque de 200 árboles de decisión.
+            </p>
+            <p>
+              Las anomalías operacionales (ej. fugas de memoria o saturación de storage) tienen menor profundidad de aislamiento en el espacio dimensional de 11 características.
+            </p>
+          </div>
+
+          <div class="method-card">
+            <h3>3. Línea Base: Umbrales Operacionales SIGeCAD</h3>
+            <p>
+              Representa el estándar de la industria tradicional: alertas directas cuando métricas individuales superan umbrales fijados (ej. CPU > 80% Warning, > 90% Critical; Temperatura > 75°C).
+            </p>
+            <p>
+              Ventaja: total interpretabilidad y velocidad. Desventaja: no detecta anomalías multivariadas combinadas ni tendencias progresivas antes del colapso.
+            </p>
+          </div>
+
+          <div class="method-card">
+            <h3>4. Métrica Principal: F1 por Evento</h3>
+            <p>
+              En monitoreo de infraestructura, un incidente es un intervalo temporal de falla $[t_{\text{inicio}}, t_{\text{fin}}]$.
+            </p>
+            <p>
+              El F1 puntual penaliza injustamente a un modelo que alertó al inicio del fallo pero no en cada minuto posterior. El <strong>F1 por Evento</strong> premia la detección oportuna de incidentes completos y cuantifica el tiempo de aviso anticipado (<em>Lead Time</em>).
+            </p>
+          </div>
+        </div>
+
+        <div class="pipeline-diagram">
+          <h3>Flujo de Inferencia End-to-End</h3>
+          <div class="flow-steps">
+            <div class="step-box">
+              <span class="step-num">01</span>
+              <span class="step-title">Telemetría Proxmox</span>
+              <span class="step-sub">Nodos, VMs, Sensores</span>
+            </div>
+            <span class="step-arrow">→</span>
+            <div class="step-box">
+              <span class="step-num">02</span>
+              <span class="step-title">Ventanas 10 min</span>
+              <span class="step-sub">Extracción estadística</span>
+            </div>
+            <span class="step-arrow">→</span>
+            <div class="step-box">
+              <span class="step-num">03</span>
+              <span class="step-title">Normalización</span>
+              <span class="step-sub">RobustScaler (Mediana/MAD)</span>
+            </div>
+            <span class="step-arrow">→</span>
+            <div class="step-box">
+              <span class="step-num">04</span>
+              <span class="step-title">Isolation Forest</span>
+              <span class="step-sub">Puntaje vs Umbral</span>
+            </div>
+            <span class="step-arrow">→</span>
+            <div class="step-box">
+              <span class="step-num">05</span>
+              <span class="step-title">Alerta y Diagnóstico</span>
+              <span class="step-sub">Comparación con Línea Base</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <span>SIGeCAD · Maestría en Inteligencia Artificial · Proyecto Final de Machine Learning</span>
+      <span class="footer-repo">Repositorio reproducible · Python 3.12/3.13</span>
+    </div>
+  </footer>
+</body>
+</html>
