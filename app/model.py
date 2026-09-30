@@ -1,4 +1,4 @@
-"""Isolation Forest anomaly detection model and SIGeCAD fixed threshold baseline."""
+"""Modelo de detección de anomalías Isolation Forest y línea base de umbrales fijos de SIGeCAD."""
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
@@ -6,10 +6,10 @@ from app.settings import FEATURES, SEED, BASELINE_THRESHOLDS
 
 
 def fit_models(train: pd.DataFrame) -> dict:
-    """Trains Isolation Forest on purely normal operational telemetry windows."""
+    """Entrena el estimador Isolation Forest exclusivamente con ventanas operacionales normales."""
     values = train[FEATURES]
     
-    # Fit Isolation Forest estimator
+    # Ajustar el estimador Isolation Forest
     forest = IsolationForest(
         n_estimators=200,
         max_samples=256,
@@ -19,12 +19,12 @@ def fit_models(train: pd.DataFrame) -> dict:
     )
     forest.fit(values)
 
-    # Compute robust scaling statistics (median and MAD) for feature attribution
+    # Calcular estadísticas de escalado robusto (mediana y MAD) para la atribución de variables
     median = values.median().to_numpy()
     mad = np.median(np.abs(values.to_numpy() - median), axis=0)
     scale = np.maximum(1.4826 * mad, 1e-6)
 
-    # Reference bounds from observed normal telemetry
+    # Rangos de referencia a partir de la telemetría normal observada
     reference = {
         feature: {
             "min": float(values[feature].min()),
@@ -48,23 +48,23 @@ def fit_models(train: pd.DataFrame) -> dict:
 
 
 def anomaly_scores(bundle: dict, data: pd.DataFrame) -> np.ndarray:
-    """Calculates continuous anomaly scores from Isolation Forest.
+    """Calcula puntajes continuos de anomalía a partir de Isolation Forest.
     
-    Inverts sklearn score_samples so higher values consistently denote higher anomaly degree.
+    Invierte el score_samples de scikit-learn para que valores mayores representen mayor grado de anomalía.
     """
     return -bundle["forest"].score_samples(data[FEATURES])
 
 
 def robust_distances(bundle: dict, data: pd.DataFrame) -> np.ndarray:
-    """Calculates deviation in MAD (Median Absolute Deviation) units per feature."""
+    """Calcula la desviación en unidades MAD (Desviación Absoluta respecto a la Mediana) por variable."""
     return np.abs((data[FEATURES].to_numpy() - bundle["median"]) / bundle["scale"])
 
 
 def baseline_scores(bundle: dict, data: pd.DataFrame) -> np.ndarray:
-    """Calculates continuous baseline score based on SIGeCAD fixed threshold ratios.
+    """Calcula el puntaje continuo de línea base basado en las proporciones de umbral fijo de SIGeCAD.
     
-    A score >= 1.0 indicates that at least one metric exceeded the critical threshold.
-    A score >= 0.85 indicates that at least one metric exceeded the warning threshold.
+    Un puntaje >= 1.0 indica que al menos una métrica superó el umbral crítico.
+    Un puntaje >= 0.85 indica que al menos una métrica superó el umbral de advertencia.
     """
     ratios = []
     crit_thresholds = bundle["baseline_thresholds"]["critical"]
@@ -77,7 +77,7 @@ def baseline_scores(bundle: dict, data: pd.DataFrame) -> np.ndarray:
 
 
 def baseline_rules_decision(bundle: dict, values: dict) -> dict:
-    """Evaluates strict warning/critical threshold logic for a single reading."""
+    """Evalúa la lógica estricta de advertencia/crítico ante umbrales fijos para una lectura individual."""
     warnings = []
     criticals = []
     

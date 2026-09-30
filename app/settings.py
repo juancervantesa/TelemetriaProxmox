@@ -1,4 +1,4 @@
-"""Shared configuration, operational thresholds, telemetry features and scenario definitions."""
+"""Configuración compartida, umbrales operacionales, variables de telemetría y definición de escenarios."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -9,15 +9,15 @@ FRONTEND_DIR = ROOT / "frontend"
 SEED = 42
 FALSE_ALARM_BUDGET = 0.05
 
-# Temporal Windowing Settings
+# Parámetros de ventanas temporales
 WINDOW_SIZE_MINUTES = 10
 WINDOW_STEP_MINUTES = 2
 
-# Temporal partition boundaries (covering Proxmox telemetry span: Sept 2 to Sept 30, 2026)
+# Límites de partición temporal (abarcan el periodo de telemetría de Proxmox: 2 al 30 de septiembre de 2026)
 TRAIN_END = "2026-09-18T00:00:00"
 VALIDATION_END = "2026-09-25T00:00:00"
 
-# Telemetry features aggregated per 10-minute window
+# Variables de telemetría agregadas por ventana de 10 minutos
 TELEMETRY_FEATURES = {
     "cpu_mean": {"label": "CPU promedio", "unit": "%", "min": 0.0, "max": 100.0, "step": 0.1, "default": 24.5},
     "cpu_max": {"label": "CPU pico", "unit": "%", "min": 0.0, "max": 100.0, "step": 0.1, "default": 35.0},
@@ -34,7 +34,7 @@ TELEMETRY_FEATURES = {
 
 FEATURES = list(TELEMETRY_FEATURES.keys())
 
-# Operational Thresholds (Baseline SIGeCAD rules)
+# Umbrales operacionales (Reglas de línea base de SIGeCAD)
 BASELINE_THRESHOLDS = {
     "warning": {
         "cpu_max": 80.0,
@@ -50,7 +50,7 @@ BASELINE_THRESHOLDS = {
     }
 }
 
-# Predefined operational scenarios for demo and testing
+# Escenarios operacionales predefinidos para demostración y pruebas
 SCENARIOS = [
     {
         "id": "usual",

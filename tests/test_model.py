@@ -1,4 +1,4 @@
-"""Unit tests for Isolation Forest training, baseline evaluation, and Event-based F1 computation."""
+"""Pruebas unitarias para el entrenamiento de Isolation Forest, evaluación de línea base y cálculo de F1 por eventos."""
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,7 +10,7 @@ from app.settings import FEATURES
 
 @pytest.fixture(scope="module")
 def dataset():
-    df, incidents = generate_data(num_hours=168)  # 7-day subset for fast testing
+    df, incidents = generate_data(num_hours=168)  # Subconjunto de 7 días para pruebas rápidas
     return df, incidents
 
 
@@ -24,12 +24,12 @@ def test_model_training_and_scoring(dataset):
     assert "scale" in bundle
     assert len(bundle["median"]) == len(FEATURES)
 
-    # Score samples
+    # Puntajes de muestras
     scores = anomaly_scores(bundle, df)
     assert len(scores) == len(df)
     assert np.isfinite(scores).all()
 
-    # Distances
+    # Distancias robustas
     distances = robust_distances(bundle, df)
     assert distances.shape == (len(df), len(FEATURES))
 
@@ -44,7 +44,7 @@ def test_baseline_scoring(dataset):
 
 
 def test_event_based_metrics_logic():
-    """Verify event-based matching and lead time calculation with synthetic incidents."""
+    """Verifica el emparejamiento por eventos y el cálculo de anticipación con incidentes sintéticos."""
     incidents = [
         {
             "incident_id": "INC-01",
@@ -59,10 +59,10 @@ def test_event_based_metrics_logic():
     df = pd.DataFrame({
         "timestamp": [ts.isoformat() for ts in timestamps],
         "resource_id": ["node:dl380-01"] * 6,
-        "is_anomaly": [0, 0, 1, 1, 0, 0]  # indices 2 and 3 correspond to 10:00 and 10:30
+        "is_anomaly": [0, 0, 1, 1, 0, 0]  # Índices 2 y 3 corresponden a 10:00 y 10:30
     })
 
-    # Scenario A: Alert fired at 09:30 (lead time = 30 min before incident)
+    # Escenario A: Alerta disparada a las 09:30 (anticipación = 30 min antes del inicio del incidente)
     scores = np.array([0.2, 0.9, 0.8, 0.4, 0.1, 0.1])
     metrics = event_based_metrics(df, scores, threshold=0.7, incidents=incidents, lead_time_minutes=30)
     

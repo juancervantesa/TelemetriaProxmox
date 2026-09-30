@@ -1,4 +1,4 @@
-"""FastAPI REST application and static web service for SIGeCAD telemetry anomaly detection."""
+"""Aplicación REST FastAPI y servicio web estático para la detección de anomalías en telemetría de SIGeCAD."""
 import json
 from contextlib import asynccontextmanager
 import joblib
@@ -21,7 +21,7 @@ from app.settings import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Loads and verifies model and metrics artifacts on server startup."""
+    """Carga y valida los artefactos del modelo y las métricas al iniciar el servidor."""
     app.state.bundle = None
     app.state.report = None
     
@@ -45,14 +45,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Serve static frontend files
+# Servir archivos estáticos del frontend
 FRONTEND_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Formats validation errors into friendly Spanish JSON responses."""
+    """Formatea los errores de validación en respuestas JSON legibles en español."""
     errors = []
     for err in exc.errors():
         loc_str = " -> ".join(str(l) for l in err.get("loc", []))
@@ -71,7 +71,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 def require_model():
-    """Ensures model bundle is loaded before inference."""
+    """Garantiza que el paquete del modelo esté cargado antes de la inferencia."""
     if app.state.bundle is None:
         raise HTTPException(
             status_code=503,
@@ -82,7 +82,7 @@ def require_model():
 
 @app.get("/")
 def home():
-    """Serves the main frontend dashboard."""
+    """Sirve el panel principal de la interfaz web."""
     index_file = FRONTEND_DIR / "index.html"
     if not index_file.exists():
         return {"status": "backend_ready", "message": "Frontend en construcción."}
@@ -91,13 +91,13 @@ def home():
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    """Silences browser favicon requests with 204 No Content."""
+    """Silencia las peticiones de favicon del navegador con 204 No Content."""
     return Response(status_code=204)
 
 
 @app.get("/api/health")
 def health():
-    """System health check endpoint."""
+    """Punto de verificación de estado y salud del sistema."""
     has_model = app.state.bundle is not None
     return {
         "status": "ok" if has_model else "model_missing",
@@ -109,7 +109,7 @@ def health():
 
 @app.get("/api/config")
 def config():
-    """Returns telemetry schema metadata, thresholds and pre-configured scenarios."""
+    """Retorna metadatos del esquema de telemetría, umbrales y escenarios preconfigurados."""
     return {
         "features": TELEMETRY_FEATURES,
         "feature_order": FEATURES,
@@ -120,14 +120,14 @@ def config():
 
 @app.get("/api/metrics")
 def metrics():
-    """Returns test and validation metrics comparing Isolation Forest against Baseline."""
+    """Retorna métricas de prueba y validación comparando Isolation Forest frente a la Línea Base."""
     require_model()
     return app.state.report
 
 
 @app.get("/api/events")
 def events():
-    """Returns the catalog of operational incident events and their test detection outcomes."""
+    """Retorna el catálogo de eventos de incidentes operacionales y sus resultados en el conjunto de prueba."""
     require_model()
     test_eval = app.state.report.get("test", {}).get("model", {}).get("event_based", {})
     return {
@@ -140,7 +140,7 @@ def events():
 
 @app.post("/api/inspect")
 def inspect(window: WindowInput):
-    """Performs real-time anomaly inference for an aggregated telemetry window."""
+    """Realiza la inferencia de anomalías en tiempo real para una ventana temporal de telemetría."""
     bundle = require_model()
     result = inspect_reading(bundle, window.model_dump())
     return result

@@ -1,4 +1,4 @@
-"""Integration tests for FastAPI endpoints: valid case, hard case, invalid case, health, config and metrics."""
+"""Pruebas de integración para endpoints FastAPI: caso válido, caso difícil, caso inválido, health, config y metrics."""
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -72,7 +72,7 @@ def test_inspect_hard_case_legitimate_batch(client):
     result = response.json()
     assert "score" in result
     assert "diagnosis" in result
-    # In legitimate high load, Isolation Forest distinguishes stability despite high CPU
+    # En carga legítima alta, Isolation Forest distingue la estabilidad a pesar del uso elevado de CPU
     assert isinstance(result["alert"], bool)
 
 
@@ -80,12 +80,12 @@ def test_inspect_hard_case_legitimate_batch(client):
 def test_inspect_invalid_input_rejected(client):
     invalid_payload = {
         "resource_id": "node:dl380-01",
-        "cpu_mean": -25.0,  # Negative value: invalid
-        "cpu_max": 250.0,   # Over 100%: invalid
+        "cpu_mean": -25.0,  # Valor negativo: inválido
+        "cpu_max": 250.0,   # Superior al 100%: inválido
         "cpu_std": 2.0,
         "cpu_trend": 0.0,
         "memory_pct_mean": 50.0,
-        "memory_pct_max": 40.0,  # Inconsistent max < mean
+        "memory_pct_max": 40.0,  # Incoherente: max < mean
         "memory_pct_trend": 0.0,
         "iowait_mean": 0.0,
         "iowait_max": 0.0,

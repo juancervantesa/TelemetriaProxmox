@@ -1,4 +1,4 @@
-"""Start the SIGeCAD Telemetry Anomaly Detection system. Creates missing data and model artifacts automatically."""
+"""Inicia el sistema SIGeCAD de detección de anomalías en telemetría. Genera automáticamente los datos y modelos faltantes."""
 import argparse
 import subprocess
 import sys

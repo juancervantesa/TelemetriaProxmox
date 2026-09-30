@@ -1,8 +1,8 @@
-"""Data ingestion, window aggregation, synthetic data generation and temporal splitting.
+"""Ingesta de datos, agregación en ventanas temporales, generación sintética y partición temporal.
 
-Supports both:
-1. Direct extraction from local TimescaleDB/PostgreSQL 'proxmox_monitor' database when available.
-2. 100% reproducible synthetic generation modeling Proxmox VE telemetry with known incident events.
+Soporta dos modalidades:
+1. Extracción directa desde la base de datos TimescaleDB/PostgreSQL 'proxmox_monitor' local cuando está disponible.
+2. Generación sintética 100% reproducible modelando la telemetría de Proxmox VE con incidentes documentados.
 """
 import json
 import numpy as np
@@ -20,21 +20,21 @@ from app.settings import (
 
 
 def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame, list[dict]]:
-    """Generates 28 days (672 hours) of multi-resource Proxmox telemetry windows.
+    """Genera 28 días (672 horas) de ventanas de telemetría multi-recurso para Proxmox VE.
     
-    Resources modeled:
-    - node:dl380-01 (Compute host 1)
-    - node:dl360-04 (Compute host 2)
-    - node:srvzy (Santa Cruz hypervisor)
-    - guest:100_AD-Zentyal (Core VM)
-    - guest:101_win11 (Desktop VM)
-    - guest:402_NS1 (Internal DNS VM)
-    - sensor:dl360_cpu2_temp (Thermal probe)
+    Recursos modelados:
+    - node:dl380-01 (Servidor de cómputo 1)
+    - node:dl360-04 (Servidor de cómputo 2)
+    - node:srvzy (Hipervisor Santa Cruz)
+    - guest:100_AD-Zentyal (VM controladora de dominio)
+    - guest:101_win11 (VM de escritorio)
+    - guest:402_NS1 (VM de DNS interno)
+    - sensor:dl360_cpu2_temp (Sensor térmico Redfish)
     """
     rng = np.random.default_rng(seed)
     start_time = pd.Timestamp("2026-09-02 00:00:00")
     
-    # 10-minute windows spaced by 30 minutes for distinct evaluation intervals
+    # Ventanas de 10 minutos espaciadas cada 30 minutos para intervalos independientes de evaluación
     window_timestamps = pd.date_range(start_time, periods=num_hours * 2, freq="30min")
     
     resources = [
@@ -46,9 +46,9 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
         {"id": "guest:402_NS1", "type": "guest", "base_cpu": 12.0, "base_ram": 35.0, "base_temp": 40.0},
     ]
 
-    # Pre-defined operational incident injection schedule (after train period: >= Sept 18)
+    # Calendario predefinido de inyección de incidentes operacionales (posteriores al periodo de entrenamiento: >= 18 Sep)
     incidents = [
-        # Validation set incidents (Sept 18 - Sept 25)
+        # Incidentes del conjunto de validación (18 Sep - 25 Sep)
         {
             "incident_id": "INC-VAL-01",
             "resource_id": "guest:100_AD-Zentyal",
@@ -76,7 +76,7 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
             "description": "Alerta térmica en CPU 2 por fallo de ventilador del chasis",
             "severity": "warning"
         },
-        # Test set incidents (Sept 25 - Sept 30) - Mirrors real Proxmox cluster logs
+        # Incidentes del conjunto de prueba (25 Sep - 30 Sep) - Reflejan logs reales de clústeres Proxmox
         {
             "incident_id": "INC-TEST-01",
             "resource_id": "guest:100_AD-Zentyal",
@@ -131,7 +131,7 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
             base_ram = res["base_ram"] + 2.0 * daily_cycle
             base_temp = res["base_temp"] + 3.0 * daily_cycle
 
-            # Check if this window falls inside an active incident for this resource
+            # Comprobar si esta ventana coincide con un incidente activo para este recurso
             active_inc = None
             for inc in incidents:
                 if inc["resource_id"] == res_id:
@@ -141,7 +141,7 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
                         active_inc = inc
                         break
 
-            # Normal baseline metrics with realistic noise
+            # Métricas normales de línea base con variabilidad y ruido realista
             cpu_mean = float(np.clip(base_cpu + rng.normal(0, 3.5), 2.0, 92.0))
             cpu_max = float(np.clip(cpu_mean + abs(rng.normal(6.0, 3.0)), cpu_mean, 99.0))
             cpu_std = float(np.clip(abs(rng.normal(2.5, 1.0)), 0.5, 20.0))
@@ -157,8 +157,8 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
             net_io_mb_s = float(np.clip(abs(rng.normal(10.0 + 5.0 * daily_cycle, 3.0)), 0.1, 100.0))
             temp_max_c = float(np.clip(base_temp + rng.normal(0, 1.5), 25.0, 72.0))
 
-            # Introduce Legitimate Batch Tasks (High CPU, low std, stable RAM, normal temp)
-            # Occurring periodically on Wednesdays / Fridays without being an anomaly
+            # Introducir tareas por lotes legítimas (alta CPU, baja variabilidad, RAM estable, temperatura segura)
+            # Ocurren periódicamente los miércoles / viernes sin constituir anomalía operacional
             is_legit_batch = (ts.weekday() in [2, 4]) and (hour_of_day in [2, 3]) and (res_id == "node:dl380-01")
             if is_legit_batch and not active_inc:
                 cpu_mean = float(np.clip(84.0 + rng.normal(0, 1.5), 75.0, 90.0))
@@ -175,9 +175,9 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
                 anomaly_type = active_inc["incident_type"]
                 incident_id = active_inc["incident_id"]
 
-                # Apply incident-specific distortion patterns
+                # Aplicar patrones específicos de degradación según el tipo de incidente
                 if anomaly_type == "memory_leak":
-                    # Steady accumulation of RAM, trend surges, max RAM crosses limits
+                    # Acumulación sostenida de RAM, repunte de tendencia y superación de umbrales
                     leak_progress = (ts - pd.Timestamp(active_inc["start_time"])).total_seconds() / (
                         (pd.Timestamp(active_inc["end_time"]) - pd.Timestamp(active_inc["start_time"])).total_seconds()
                     )
@@ -188,7 +188,7 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
                     cpu_max = float(np.clip(cpu_mean + 10.0, cpu_mean, 95.0))
 
                 elif anomaly_type == "storage_stall":
-                    # I/O wait skyrockets, disk operations stall, CPU appears low/idle
+                    # Disparo crítico de iowait, bloqueo de operaciones de disco y CPU en espera
                     iowait_mean = float(np.clip(32.0 + rng.normal(0, 5.0), 20.0, 70.0))
                     iowait_max = float(np.clip(iowait_mean + abs(rng.normal(25.0, 5.0)), iowait_mean, 98.0))
                     cpu_mean = float(np.clip(12.0 + rng.normal(0, 2.0), 2.0, 30.0))
@@ -196,14 +196,14 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
                     cpu_std = float(np.clip(abs(rng.normal(6.0, 1.5)), 2.0, 25.0))
 
                 elif anomaly_type == "cpu_overheat":
-                    # Thermal runaway
+                    # Descontrol térmico en procesador / chasis
                     temp_max_c = float(np.clip(82.0 + rng.normal(0, 3.0), 76.0, 98.0))
                     cpu_mean = float(np.clip(base_cpu + 25.0 + rng.normal(0, 4.0), 40.0, 92.0))
                     cpu_max = float(np.clip(cpu_mean + 10.0, cpu_mean, 98.0))
                     cpu_trend = float(np.clip(7.0 + rng.normal(0, 1.5), 3.0, 18.0))
 
                 elif anomaly_type == "vm_crash":
-                    # Extreme volatility, memory panic, sudden dropping of connections
+                    # Volatilidad extrema, inestabilidad de memoria y caída súbita de conexiones
                     cpu_mean = float(np.clip(75.0 + rng.normal(0, 8.0), 40.0, 98.0))
                     cpu_max = float(np.clip(cpu_mean + 15.0, cpu_mean, 99.9))
                     cpu_std = float(np.clip(abs(rng.normal(24.0, 4.0)), 15.0, 45.0))
@@ -238,7 +238,7 @@ def generate_data(seed: int = SEED, num_hours: int = 672) -> tuple[pd.DataFrame,
 
 
 def validate_data(data: pd.DataFrame) -> None:
-    """Validates dataframe schema, column bounds and logical consistency."""
+    """Valida el esquema del DataFrame, rangos de variables y coherencia lógica."""
     required = ["window_id", "timestamp", "resource_id", "resource_type", *FEATURES, "is_anomaly", "anomaly_type"]
     if not set(required) <= set(data.columns) or data.empty:
         raise ValueError(f"Missing required columns. Found: {list(data.columns)}")
@@ -247,18 +247,18 @@ def validate_data(data: pd.DataFrame) -> None:
     if data.window_id.duplicated().any():
         raise ValueError("Window IDs must be unique.")
     
-    # Check date formats
+    # Comprobar formatos de fecha
     dates = pd.to_datetime(data.timestamp, errors="raise")
     if dates.dt.tz is not None:
         data["timestamp"] = dates.dt.tz_localize(None).dt.strftime("%Y-%m-%dT%H:%M:%S")
 
-    # Check numeric feature ranges
+    # Comprobar rangos de variables numéricas
     for feature in FEATURES:
         values = pd.to_numeric(data[feature], errors="raise")
         if not np.isfinite(values).all():
             raise ValueError(f"Feature '{feature}' contains non-finite numbers.")
 
-    # Check anomaly labels
+    # Comprobar etiquetas de anomalía
     if not set(data.is_anomaly) <= {0, 1}:
         raise ValueError("is_anomaly column must strictly be 0 or 1.")
     if not ((data.anomaly_type != "normal").astype(int) == data.is_anomaly).all():
@@ -266,7 +266,7 @@ def validate_data(data: pd.DataFrame) -> None:
 
 
 def split_data(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Splits data temporally into train (pure normal), validation and test sets."""
+    """Divide los datos cronológicamente en conjuntos de entrenamiento (normal puro), validación y prueba."""
     data = data.sort_values("timestamp").copy()
     dates = pd.to_datetime(data.timestamp)
     
@@ -285,7 +285,7 @@ def split_data(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
 
 
 def main():
-    """Generates the reproducible dataset, validates it, and writes partition files."""
+    """Genera el dataset reproducible, lo valida y escribe las particiones en disco."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     df, incidents = generate_data()
     validate_data(df)
@@ -299,12 +299,12 @@ def main():
     val.to_csv(DATA_DIR / "validation.csv", index=False)
     test.to_csv(DATA_DIR / "test.csv", index=False)
 
-    print(f"Dataset generated successfully:")
-    print(f" - Total windows: {len(df)}")
-    print(f" - Train (pure normal): {len(train)} windows")
-    print(f" - Validation: {len(val)} windows ({val.is_anomaly.sum()} anomalous)")
-    print(f" - Test: {len(test)} windows ({test.is_anomaly.sum()} anomalous)")
-    print(f" - Incidents cataloged: {len(incidents)}")
+    print(f"Dataset generado exitosamente:")
+    print(f" - Ventanas totales: {len(df)}")
+    print(f" - Entrenamiento (normal puro): {len(train)} ventanas")
+    print(f" - Validación: {len(val)} ventanas ({val.is_anomaly.sum()} anómalas)")
+    print(f" - Prueba: {len(test)} ventanas ({test.is_anomaly.sum()} anómalas)")
+    print(f" - Incidentes catalogados: {len(incidents)}")
 
 
 if __name__ == "__main__":

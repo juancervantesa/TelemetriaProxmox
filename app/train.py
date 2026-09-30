@@ -1,4 +1,4 @@
-"""Complete reproducible training and evaluation pipeline for SIGeCAD telemetry anomaly detection."""
+"""Pipeline completo y reproducible de entrenamiento y evaluación para la detección de anomalías en telemetría de SIGeCAD."""
 import hashlib
 import json
 import platform
@@ -22,7 +22,7 @@ from app.settings import (
 
 
 def save_json(path, value):
-    """Utility to persist JSON files with proper indentation."""
+    """Utilidad para persistir archivos JSON con indentación estándar."""
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
@@ -34,7 +34,7 @@ def main():
     incidents_path = DATA_DIR / "incidents.json"
 
     if not csv_path.exists() or not incidents_path.exists():
-        print("Data files not found. Generating reproducible telemetry windows...")
+        print("Archivos de datos no encontrados. Generando ventanas reproducibles de telemetría...")
         data, incidents = generate_data()
         data.to_csv(csv_path, index=False)
         save_json(incidents_path, incidents)
@@ -46,23 +46,23 @@ def main():
     validate_data(data)
     train, validation, test = split_data(data)
 
-    # Save temporal split partitions
+    # Guardar particiones temporales del dataset
     train.to_csv(DATA_DIR / "train.csv", index=False)
     validation.to_csv(DATA_DIR / "validation.csv", index=False)
     test.to_csv(DATA_DIR / "test.csv", index=False)
 
-    print(f"Training on {len(train)} normal windows...")
+    print(f"Entrenando con {len(train)} ventanas normales...")
     bundle = fit_models(train)
 
-    # 1. Validation phase (Operating threshold selection based on false alarm budget)
-    print("Selecting operating thresholds on validation set...")
+    # 1. Fase de validación (Selección de umbral operacional según presupuesto de falsas alarmas)
+    print("Seleccionando umbrales operacionales en el conjunto de validación...")
     val_scores = anomaly_scores(bundle, validation)
     val_baseline = baseline_scores(bundle, validation)
 
     selected_model = select_threshold(validation.is_anomaly, val_scores, FALSE_ALARM_BUDGET)
     selected_baseline = select_threshold(validation.is_anomaly, val_baseline, FALSE_ALARM_BUDGET)
 
-    # Compute dataset SHA-256 for provenance
+    # Calcular resumen SHA-256 del dataset para procedencia y reproducibilidad
     digest = hashlib.sha256(csv_path.read_bytes()).hexdigest()
     version = f"sigecad-iforest-v1-{digest[:8]}"
 
@@ -74,15 +74,15 @@ def main():
         "seed": SEED,
     })
 
-    # 2. Test phase (Strictly unchanged evaluation on test set)
-    print("Evaluating models on test partition...")
+    # 2. Fase de prueba (Evaluación inmutable sobre partición de prueba)
+    print("Evaluando modelos en la partición de prueba...")
     test_scores = anomaly_scores(bundle, test)
     test_baseline = baseline_scores(bundle, test)
 
     test_results_model = evaluate(test, test_scores, bundle["threshold"], incidents)
     test_results_baseline = evaluate(test, test_baseline, bundle["baseline_threshold"], incidents)
 
-    # Breakdown by incident anomaly type
+    # Desglose según tipo de anomalía de incidente
     test_predictions = test[["window_id", "timestamp", "resource_id", "is_anomaly", "anomaly_type", "incident_id"]].copy()
     test_predictions["model_score"] = test_scores
     test_predictions["model_alert"] = (test_scores >= bundle["threshold"]).astype(int)
@@ -98,13 +98,13 @@ def main():
             "baseline_recall": round(float(group["baseline_alert"].mean()), 4)
         })
 
-    # Pre-calculate inspect responses for all predefined scenarios
+    # Precalcular predicciones para todos los escenarios preconfigurados
     scenario_predictions = {}
     for scn in SCENARIOS:
         res = inspect_reading(bundle, scn["values"])
         scenario_predictions[scn["id"]] = res
 
-    # Construct comprehensive report
+    # Construir informe integral de métricas
     report = {
         "version": version,
         "dataset": "Proxmox Datacenter Telemetry (SIGeCAD)",
@@ -138,13 +138,13 @@ def main():
         }
     }
 
-    # Save artifacts
+    # Guardar artefactos
     joblib.dump(bundle, ARTIFACT_DIR / "model.joblib", compress=3)
     save_json(ARTIFACT_DIR / "metrics.json", report)
     save_json(ARTIFACT_DIR / "example_predictions.json", scenario_predictions)
     test_predictions.to_csv(ARTIFACT_DIR / "test_predictions.csv", index=False)
 
-    # Format Markdown evaluation summary
+    # Formatear resumen Markdown de evaluación
     ev_m = test_results_model["event_based"]
     ev_b = test_results_baseline["event_based"]
 
@@ -195,8 +195,8 @@ def main():
     ])
 
     (ARTIFACT_DIR / "evaluation.md").write_text("\n".join(md_lines) + "\n", encoding="utf-8")
-    print("\nTraining and evaluation pipeline completed successfully!")
-    print(f"Artifacts exported to: {ARTIFACT_DIR}")
+    print("\n¡Pipeline de entrenamiento y evaluación completado exitosamente!")
+    print(f"Artefactos exportados a: {ARTIFACT_DIR}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Inference module for scoring single telemetry windows and comparing against SIGeCAD baseline."""
+"""Módulo de inferencia para evaluar ventanas individuales de telemetría y contrastarlas con la línea base de SIGeCAD."""
 import numpy as np
 import pandas as pd
 from app.model import anomaly_scores, baseline_scores, robust_distances, baseline_rules_decision
@@ -6,10 +6,10 @@ from app.settings import FEATURES, TELEMETRY_FEATURES
 
 
 def diagnose_anomaly_cause(indicators: list[dict]) -> str:
-    """Diagnoses the most probable operational incident root cause based on feature deviations."""
+    """Diagnostica la causa raíz más probable del incidente operacional basándose en las desviaciones de variables."""
     dev_map = {ind["feature"]: ind["robust_distance"] for ind in indicators}
     
-    # Priority diagnostic heuristics
+    # Heurísticas de diagnóstico priorizadas
     if dev_map.get("memory_pct_trend", 0.0) >= 3.0 and dev_map.get("memory_pct_max", 0.0) >= 2.0:
         return "Patrón característico de Fuga de Memoria Progresiva (Memory Leak)"
     if dev_map.get("iowait_max", 0.0) >= 3.0 or dev_map.get("iowait_mean", 0.0) >= 3.0:
@@ -21,27 +21,27 @@ def diagnose_anomaly_cause(indicators: list[dict]) -> str:
     if dev_map.get("net_io_mb_s", 0.0) >= 3.0:
         return "Anomalía de tráfico en interfaz de red (posible inundación o ráfaga inusual)"
     
-    # Highest deviation fallback
+    # Fallback por variable con mayor desviación
     highest_dev = max(indicators, key=lambda x: x["robust_distance"])
     return f"Desviación multivariada anómala liderada por: {highest_dev['label']}"
 
 
 def inspect_reading(bundle: dict, values: dict) -> dict:
-    """Analyzes an aggregated 10-minute telemetry window using both Isolation Forest and Baseline."""
+    """Analiza una ventana temporal de 10 minutos utilizando simultáneamente Isolation Forest y Línea Base."""
     data = pd.DataFrame([values], columns=FEATURES)
     
-    # Model scores
+    # Puntajes y alerta del modelo de ML
     model_score = float(anomaly_scores(bundle, data)[0])
     model_thresh = float(bundle["threshold"])
     model_alert = bool(model_score >= model_thresh)
 
-    # Baseline scores & rules
+    # Puntajes y reglas de la Línea Base
     base_score = float(baseline_scores(bundle, data)[0])
     base_thresh = float(bundle["baseline_threshold"])
     base_alert = bool(base_score >= base_thresh)
     base_decision = baseline_rules_decision(bundle, values)
 
-    # Feature attribution / deviations
+    # Atribución de variables y cálculo de desviaciones relativas
     distances = robust_distances(bundle, data)[0]
     indicators = []
     
@@ -67,7 +67,7 @@ def inspect_reading(bundle: dict, values: dict) -> dict:
             "outside_observed_range": bool(val < ref["p01"] or val > ref["p99"])
         })
 
-    # Sort indicators by highest anomaly deviation
+    # Ordenar indicadores por mayor desviación anómala
     indicators.sort(key=lambda x: x["robust_distance"], reverse=True)
 
     diagnosis = diagnose_anomaly_cause(indicators) if (model_alert or base_alert) else "Comportamiento dentro del rango operativo normal"

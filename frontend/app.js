@@ -1,12 +1,12 @@
 /**
- * SIGeCAD - Frontend Application Logic
- * Communicates with FastAPI backend, manages tabs, renders controls and evaluates telemetry windows.
+ * SIGeCAD - Lógica de la aplicación Frontend
+ * Comunica con el backend FastAPI, gestiona pestañas, renderiza controles y evalúa ventanas de telemetría.
  */
 
 let appConfig = null;
 let currentReport = null;
 
-// DOM Elements
+// Elementos del DOM
 const elements = {
   statusBadge: document.getElementById("system-status-badge"),
   statusBanner: document.getElementById("status-banner"),
@@ -36,11 +36,11 @@ const elements = {
   incidentsList: document.getElementById("incidents-list")
 };
 
-// Initialize Application
+// Inicialización de la aplicación
 async function initApp() {
   setupTabs();
   try {
-    // 1. Fetch Health
+    // 1. Consultar estado del servicio (Health)
     const healthRes = await fetch("/api/health");
     const healthData = await healthRes.json();
     
@@ -55,24 +55,24 @@ async function initApp() {
       return;
     }
 
-    // 2. Fetch Config & Features
+    // 2. Obtener configuración y variables
     const configRes = await fetch("/api/config");
     appConfig = await configRes.json();
     
     renderFeatureFields(appConfig.features, appConfig.feature_order);
     renderScenarios(appConfig.scenarios);
 
-    // 3. Fetch Evaluation Metrics
+    // 3. Obtener métricas de evaluación
     const metricsRes = await fetch("/api/metrics");
     if (metricsRes.ok) {
       currentReport = await metricsRes.json();
       renderEvaluationMetrics(currentReport);
     }
 
-    // Enable submit
+    // Habilitar botón de envío
     elements.btnSubmit.disabled = false;
 
-    // Load first default scenario (Usual)
+    // Cargar primer escenario predeterminado (Operación normal)
     if (appConfig.scenarios && appConfig.scenarios.length > 0) {
       loadScenario(appConfig.scenarios[0].id);
     }
@@ -85,7 +85,7 @@ async function initApp() {
   }
 }
 
-// Navigation Tabs Setup
+// Configuración de pestañas de navegación
 function setupTabs() {
   const navBtns = document.querySelectorAll(".nav-btn");
   const views = document.querySelectorAll(".view");
@@ -107,7 +107,7 @@ function setupTabs() {
   });
 }
 
-// Render Input Sliders and Numbers
+// Renderizar controles deslizantes y numéricos de variables
 function renderFeatureFields(features, featureOrder) {
   elements.featureFields.innerHTML = "";
 
@@ -163,7 +163,7 @@ function renderFeatureFields(features, featureOrder) {
   });
 }
 
-// Render Scenario Quick-load Buttons
+// Renderizar botones de carga rápida de escenarios
 function renderScenarios(scenarios) {
   elements.scenariosList.innerHTML = "";
 
@@ -187,7 +187,7 @@ function clearActiveScenario() {
   document.querySelectorAll(".chip-btn").forEach((b) => b.classList.remove("active"));
 }
 
-// Load Scenario Values into Form
+// Cargar valores del escenario en el formulario
 function loadScenario(scenarioId) {
   if (!appConfig) return;
   const scenario = appConfig.scenarios.find((s) => s.id === scenarioId);
@@ -197,7 +197,7 @@ function loadScenario(scenarioId) {
   const activeBtn = document.querySelector(`.chip-btn[data-scenario-id="${scenarioId}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 
-  // Populate values
+  // Poblar valores
   Object.entries(scenario.values || {}).forEach(([key, val]) => {
     const slider = document.getElementById(`slider-${key}`);
     const num = document.getElementById(`num-${key}`);
@@ -205,7 +205,7 @@ function loadScenario(scenarioId) {
     if (num) num.value = val;
   });
 
-  // Assign appropriate resource based on scenario
+  // Asignar recurso correspondiente según el escenario
   if (scenarioId === "cpu_overheat") {
     elements.resourceSelect.value = "node:dl360-04";
   } else if (scenarioId === "storage_stall") {
@@ -216,11 +216,11 @@ function loadScenario(scenarioId) {
     elements.resourceSelect.value = "node:dl380-01";
   }
 
-  // Auto-submit analysis for seamless user experience
+  // Envío automático de análisis para agilizar la interacción
   submitAnalysis();
 }
 
-// Submit Telemetry Form
+// Envío del formulario de telemetría
 elements.telemetryForm.addEventListener("submit", (e) => {
   e.preventDefault();
   submitAnalysis();
@@ -277,12 +277,12 @@ async function submitAnalysis() {
   }
 }
 
-// Render Results on Screen
+// Renderizado de resultados en pantalla
 function renderAnalysisResult(data) {
   elements.resultEmpty.classList.add("hidden");
   elements.resultContent.classList.remove("hidden");
 
-  // Diagnosis Card
+  // Tarjeta de diagnóstico
   elements.diagnosisResource.textContent = data.resource_id;
   elements.diagnosisText.textContent = data.diagnosis;
 
@@ -303,18 +303,18 @@ function renderAnalysisResult(data) {
     elements.diagnosisBadge.textContent = "NORMAL";
   }
 
-  // Model Card
+  // Tarjeta del modelo Isolation Forest
   elements.modelAlertBadge.className = `badge ${data.alert ? "badge-alert" : "badge-normal"}`;
   elements.modelAlertBadge.textContent = data.alert ? "ANOMALÍA" : "NORMAL";
   elements.modelScoreVal.textContent = data.score.toFixed(4);
   elements.modelThresholdVal.textContent = data.threshold.toFixed(4);
 
-  // Score Bar (% normalized roughly around threshold)
+  // Barra de progreso de puntaje normalizada respecto al umbral
   const modelPct = Math.min(Math.max(((data.score - 0.3) / 0.4) * 100, 5), 100);
   elements.modelScoreBar.style.width = `${modelPct}%`;
   elements.modelScoreBar.className = `progress-bar-fill ${data.alert ? "alert" : ""}`;
 
-  // Baseline Card
+  // Tarjeta de Línea Base
   elements.baselineAlertBadge.className = `badge ${data.baseline.alert ? "badge-alert" : "badge-normal"}`;
   elements.baselineAlertBadge.textContent = data.baseline.alert ? "ALERTA" : "NORMAL";
   elements.baselineScoreVal.textContent = data.baseline.score.toFixed(4);
@@ -324,7 +324,7 @@ function renderAnalysisResult(data) {
   elements.baselineScoreBar.style.width = `${basePct}%`;
   elements.baselineScoreBar.className = `progress-bar-fill ${data.baseline.alert ? "alert" : ""}`;
 
-  // Baseline Violations Description
+  // Descripción de infracciones a la Línea Base
   const decision = data?.baseline?.decision;
   if (decision && decision.alert) {
     const list = [...(decision.critical_violations || []), ...(decision.warning_violations || [])];
@@ -334,11 +334,11 @@ function renderAnalysisResult(data) {
     elements.baselineViolationsText.textContent = "Todas las variables respetan los umbrales fijos operacionales.";
   }
 
-  // Indicators List
+  // Lista de indicadores
   renderIndicators(data?.indicators || []);
 }
 
-// Render Indicators and Robust MAD Distances
+// Renderizado de indicadores y distancias robustas MAD
 function renderIndicators(indicators = []) {
   elements.indicatorsList.innerHTML = "";
 
@@ -363,12 +363,12 @@ function renderIndicators(indicators = []) {
   });
 }
 
-// Render Evaluation Metrics Tab
+// Renderizado de la pestaña de métricas de evaluación
 function renderEvaluationMetrics(report) {
   const modelEv = report.test.model.event_based;
   const baseEv = report.test.baseline.event_based;
 
-  // Key cards
+  // Tarjetas principales
   document.getElementById("m-event-f1-model").textContent = modelEv.event_f1.toFixed(4);
   document.getElementById("m-event-f1-base").textContent = baseEv.event_f1.toFixed(4);
 
@@ -381,7 +381,7 @@ function renderEvaluationMetrics(report) {
   document.getElementById("m-fpr-model").textContent = `${(report.test.model.false_positive_rate * 100).toFixed(2)}%`;
   document.getElementById("m-fpr-base").textContent = `${(report.test.baseline.false_positive_rate * 100).toFixed(2)}%`;
 
-  // Full table
+  // Tabla comparativa completa
   const rows = [
     { label: "F1 por Evento de Incidente (Métrica Principal)", m: modelEv.event_f1.toFixed(4), b: baseEv.event_f1.toFixed(4), desc: "Calidad global ponderada de detección de incidentes completos" },
     { label: "Recall por Evento (Incidentes Detectados)", m: `${modelEv.tp_events} / ${modelEv.total_incidents} (${(modelEv.event_recall * 100).toFixed(1)}%)`, b: `${baseEv.tp_events} / ${baseEv.total_incidents} (${(baseEv.event_recall * 100).toFixed(1)}%)`, desc: "Porcentaje de incidentes reales alertados a tiempo" },
@@ -404,7 +404,7 @@ function renderEvaluationMetrics(report) {
     </tr>
   `).join("");
 
-  // Incidents Catalog
+  // Catálogo de incidentes
   elements.incidentsList.innerHTML = (modelEv.incident_details || []).map((inc) => `
     <div class="incident-card">
       <div class="incident-card-header">
@@ -423,7 +423,7 @@ function renderEvaluationMetrics(report) {
   `).join("");
 }
 
-// Banner Utility
+// Utilidad para avisos informativos (Banner)
 function showBanner(message, type = "info") {
   elements.statusBanner.innerHTML = message;
   elements.statusBanner.className = `banner ${type}`;
@@ -434,5 +434,5 @@ function hideBanner() {
   elements.statusBanner.classList.add("hidden");
 }
 
-// Start
+// Inicio al cargar el DOM
 document.addEventListener("DOMContentLoaded", initApp);

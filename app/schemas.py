@@ -1,4 +1,4 @@
-"""Pydantic schemas and strict validators for telemetry window inputs."""
+"""Esquemas Pydantic y validadores estrictos para ventanas de telemetría."""
 import math
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -6,21 +6,21 @@ from app.settings import FEATURES, TELEMETRY_FEATURES
 
 
 class WindowInput(BaseModel):
-    """Represents an aggregated 10-minute telemetry window for a resource."""
+    """Representa una ventana temporal agregada de 10 minutos para un recurso."""
     model_config = ConfigDict(extra="forbid")
 
-    resource_id: Optional[str] = Field(default="node:dl380-01", description="Identifier of node, VM or sensor")
-    cpu_mean: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Average CPU usage in percentage")
-    cpu_max: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Peak CPU usage in percentage")
-    cpu_std: float = Field(ge=0.0, le=50.0, allow_inf_nan=False, description="Standard deviation of CPU usage")
-    cpu_trend: float = Field(ge=-50.0, le=50.0, allow_inf_nan=False, description="Slope / trend of CPU over window")
-    memory_pct_mean: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Average RAM usage in percentage")
-    memory_pct_max: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Peak RAM usage in percentage")
-    memory_pct_trend: float = Field(ge=-50.0, le=50.0, allow_inf_nan=False, description="Memory accumulation trend")
-    iowait_mean: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Average I/O wait percentage")
-    iowait_max: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Peak I/O wait percentage")
-    net_io_mb_s: float = Field(ge=0.0, le=500.0, allow_inf_nan=False, description="Network throughput in MB/s")
-    temp_max_c: float = Field(ge=15.0, le=120.0, allow_inf_nan=False, description="Maximum sensor temperature in °C")
+    resource_id: Optional[str] = Field(default="node:dl380-01", description="Identificador del nodo, VM o sensor")
+    cpu_mean: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Uso medio de CPU en porcentaje")
+    cpu_max: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Uso pico de CPU en porcentaje")
+    cpu_std: float = Field(ge=0.0, le=50.0, allow_inf_nan=False, description="Desviación estándar del uso de CPU")
+    cpu_trend: float = Field(ge=-50.0, le=50.0, allow_inf_nan=False, description="Pendiente / tendencia de CPU en la ventana")
+    memory_pct_mean: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Uso promedio de memoria RAM en porcentaje")
+    memory_pct_max: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Uso pico de memoria RAM en porcentaje")
+    memory_pct_trend: float = Field(ge=-50.0, le=50.0, allow_inf_nan=False, description="Tendencia de acumulación de memoria RAM")
+    iowait_mean: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Porcentaje promedio de espera I/O")
+    iowait_max: float = Field(ge=0.0, le=100.0, allow_inf_nan=False, description="Porcentaje pico de espera I/O")
+    net_io_mb_s: float = Field(ge=0.0, le=500.0, allow_inf_nan=False, description="Tasa de transferencia de red en MB/s")
+    temp_max_c: float = Field(ge=15.0, le=120.0, allow_inf_nan=False, description="Temperatura máxima registrada en °C")
 
     @field_validator(*FEATURES, mode="before")
     @classmethod

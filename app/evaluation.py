@@ -1,4 +1,4 @@
-"""Evaluation metrics: Event-based F1, lead time, point-wise metrics and validation threshold selection."""
+"""Métricas de evaluación: F1 por eventos, anticipación temporal (lead time), métricas puntuales y selección de umbrales en validación."""
 import numpy as np
 import pandas as pd
 from datetime import timedelta
@@ -6,7 +6,7 @@ from sklearn.metrics import average_precision_score, confusion_matrix, precision
 
 
 def operating_metrics(labels: np.ndarray, scores: np.ndarray, threshold: float) -> dict:
-    """Calculates point-wise confusion matrix and classification metrics."""
+    """Calcula la matriz de confusión puntual y las métricas de clasificación por ventana."""
     labels = np.asarray(labels, dtype=int)
     predictions = np.asarray(scores) >= threshold
     tn, fp, fn, tp = confusion_matrix(labels, predictions, labels=[0, 1]).ravel()
@@ -36,10 +36,10 @@ def event_based_metrics(
     incidents: list[dict],
     lead_time_minutes: int = 30
 ) -> dict:
-    """Calculates Event-based F1, detection delay and early warning lead time.
+    """Calcula F1 por eventos, retardo de detección y tiempo de anticipación (lead time).
     
-    A True Positive event occurs if at least one alert fires on the affected resource
-    between (incident_start - lead_time) and incident_end.
+    Un evento se considera Verdadero Positivo (TP) si se dispara al menos una alerta
+    en el recurso afectado entre (inicio_incidente - lead_time) y fin_incidente.
     """
     df = data.copy()
     df["score"] = scores
@@ -49,7 +49,7 @@ def event_based_metrics(
     data_min_time = df["timestamp_dt"].min()
     data_max_time = df["timestamp_dt"].max()
 
-    # Filter incidents belonging to the timeframe of this evaluation set
+    # Filtrar incidentes comprendidos en el intervalo temporal de este conjunto
     eval_incidents = []
     for inc in incidents:
         t_start = pd.Timestamp(inc["start_time"])
@@ -68,7 +68,7 @@ def event_based_metrics(
         t_end = pd.Timestamp(inc["end_time"])
         t_lead = t_start - timedelta(minutes=lead_time_minutes)
 
-        # Windows associated with this incident on this specific resource
+        # Ventanas asociadas a este incidente en el recurso específico
         mask = (
             (df["resource_id"] == res_id) &
             (df["timestamp_dt"] >= t_lead) &
@@ -105,10 +105,10 @@ def event_based_metrics(
                 "severity": inc.get("severity", "critical")
             })
 
-    # Group false alerts outside valid incident windows into FP events
+    # Agrupar alertas falsas fuera de ventanas de incidentes en eventos de Falsos Positivos
     non_incident_alerts = df[(df["alert"] == 1) & (~df.index.isin(alerted_incident_windows))]
     
-    # Cluster contiguous false alarms per resource into distinct FP events
+    # Agrupar falsas alarmas contiguas por recurso en eventos FP diferenciados
     fp_events = 0
     for res_id, group in non_incident_alerts.groupby("resource_id"):
         sorted_ts = group["timestamp_dt"].sort_values()
@@ -140,7 +140,7 @@ def event_based_metrics(
 
 
 def select_threshold(labels: np.ndarray, scores: np.ndarray, false_alarm_budget: float) -> dict:
-    """Selects operating threshold on validation data to maximize recall subject to FPR budget."""
+    """Selecciona el umbral operacional en validación maximizando el recall sujeto al presupuesto de FPR."""
     labels, scores = np.asarray(labels, dtype=int), np.asarray(scores, dtype=float)
     if set(labels) != {0, 1} or not np.isfinite(scores).all():
         raise ValueError("Threshold selection requires binary labels and finite scores.")
@@ -154,10 +154,10 @@ def select_threshold(labels: np.ndarray, scores: np.ndarray, false_alarm_budget:
             feasible.append({"threshold": float(threshold), **metrics})
             
     if not feasible:
-        # Fallback to strictest candidate
+        # Fallback al candidato más estricto
         return {"threshold": float(scores.max()), **operating_metrics(labels, scores, float(scores.max()))}
 
-    # Best operating point: highest recall, tie-breaker precision, then higher threshold
+    # Mejor punto de operación: mayor recall, desempate por precisión, luego umbral más alto
     return max(feasible, key=lambda item: (item["recall"], item["precision"], item["threshold"]))
 
 
@@ -167,7 +167,7 @@ def evaluate(
     threshold: float,
     incidents: list[dict]
 ) -> dict:
-    """Calculates comprehensive evaluation report combining point-wise and event-based metrics."""
+    """Calcula el informe integral de evaluación combinando métricas puntuales y basadas en eventos."""
     labels = data["is_anomaly"].to_numpy()
     point_metrics = operating_metrics(labels, scores, threshold)
     event_metrics = event_based_metrics(data, scores, threshold, incidents)
