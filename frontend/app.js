@@ -198,7 +198,7 @@ function loadScenario(scenarioId) {
   if (activeBtn) activeBtn.classList.add("active");
 
   // Populate values
-  Object.entries(scenario.values).forEach(([key, val]) => {
+  Object.entries(scenario.values || {}).forEach(([key, val]) => {
     const slider = document.getElementById(`slider-${key}`);
     const num = document.getElementById(`num-${key}`);
     if (slider) slider.value = val;
@@ -325,9 +325,9 @@ function renderAnalysisResult(data) {
   elements.baselineScoreBar.className = `progress-bar-fill ${data.baseline.alert ? "alert" : ""}`;
 
   // Baseline Violations Description
-  const decision = data.baseline.decision;
+  const decision = data?.baseline?.decision;
   if (decision && decision.alert) {
-    const list = [...decision.critical_violations, ...decision.warning_violations];
+    const list = [...(decision.critical_violations || []), ...(decision.warning_violations || [])];
     const text = list.map((v) => `${v.feature} (${v.value} ≥ ${v.threshold})`).join(", ");
     elements.baselineViolationsText.textContent = `Infracción detectada: ${text}`;
   } else {
@@ -335,14 +335,14 @@ function renderAnalysisResult(data) {
   }
 
   // Indicators List
-  renderIndicators(data.indicators);
+  renderIndicators(data?.indicators || []);
 }
 
 // Render Indicators and Robust MAD Distances
-function renderIndicators(indicators) {
+function renderIndicators(indicators = []) {
   elements.indicatorsList.innerHTML = "";
 
-  indicators.forEach((item) => {
+  (indicators || []).forEach((item) => {
     const row = document.createElement("div");
     row.className = "indicator-item";
 
