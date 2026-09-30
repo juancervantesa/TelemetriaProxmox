@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import joblib
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.inference import inspect_reading
@@ -87,6 +87,12 @@ def home():
     if not index_file.exists():
         return {"status": "backend_ready", "message": "Frontend en construcción."}
     return FileResponse(index_file)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Silences browser favicon requests with 204 No Content."""
+    return Response(status_code=204)
 
 
 @app.get("/api/health")
