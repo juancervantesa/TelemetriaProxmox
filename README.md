@@ -161,8 +161,6 @@ fin de modulo/
     ├── methodology.md             # Fundamentación técnica del modelo y la línea base
     ├── incident_definition.md     # Definición matemática de eventos y agrupamiento
     ├── api.md                     # Especificación de endpoints y payloads REST
-    ├── informe_tecnico.md         # Informe técnico completo para PDF
-    └── presentacion_guion.md      # Guion y diapositivas para exposición de 5 minutos
 ```
 
 ---
@@ -173,8 +171,6 @@ fin de modulo/
 - [Fundamentación de modelos, umbrales y métricas](docs/methodology.md)
 - [Especificación formal de eventos de incidente](docs/incident_definition.md)
 - [Documentación de la API REST](docs/api.md)
-- [Informe Técnico Completo (listo para exportar a PDF)](docs/informe_tecnico.md)
-- [Guion y estructura de diapositivas (Presentación de 5 min)](docs/presentacion_guion.md)
 - [Resultados del experimento en Markdown](artifacts/evaluation.md)
 
 ---
